@@ -2,12 +2,25 @@
     "annotations": {
         "list": []
     },
+    "description": "Comprehensive monitoring dashboard for Valerix microservices",
     "editable": true,
     "gnetId": null,
-    "graphTooltip": 0,
+    "graphTooltip": 1,
     "id": null,
     "links": [],
     "panels": [
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 0
+            },
+            "id": 100,
+            "title": "🚀 Service Health Overview",
+            "type": "row"
+        },
         {
             "datasource": "Prometheus",
             "fieldConfig": {
@@ -15,33 +28,166 @@
                     "color": {
                         "mode": "thresholds"
                     },
-                    "mappings": [],
+                    "mappings": [
+                        {
+                            "options": {
+                                "1": {
+                                    "color": "green",
+                                    "text": "UP"
+                                }
+                            },
+                            "type": "value"
+                        },
+                        {
+                            "options": {
+                                "from": 0,
+                                "to": 0,
+                                "result": {
+                                    "color": "red",
+                                    "text": "DOWN"
+                                }
+                            },
+                            "type": "range"
+                        }
+                    ],
                     "thresholds": {
                         "mode": "absolute",
                         "steps": [
                             {
-                                "color": "green",
+                                "color": "red",
                                 "value": null
                             },
                             {
-                                "color": "red",
+                                "color": "green",
                                 "value": 1
                             }
                         ]
-                    },
-                    "unit": "s"
-                },
-                "overrides": []
+                    }
+                }
             },
             "gridPos": {
-                "h": 9,
-                "w": 12,
+                "h": 4,
+                "w": 6,
                 "x": 0,
-                "y": 0
+                "y": 1
+            },
+            "id": 1,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "up{job=\"order-service\"}",
+                    "refId": "A"
+                }
+            ],
+            "title": "Order Service",
+            "type": "stat"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "mappings": [
+                        {
+                            "options": {
+                                "1": {
+                                    "color": "green",
+                                    "text": "UP"
+                                }
+                            },
+                            "type": "value"
+                        },
+                        {
+                            "options": {
+                                "from": 0,
+                                "to": 0,
+                                "result": {
+                                    "color": "red",
+                                    "text": "DOWN"
+                                }
+                            },
+                            "type": "range"
+                        }
+                    ],
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "red",
+                                "value": null
+                            },
+                            {
+                                "color": "green",
+                                "value": 1
+                            }
+                        ]
+                    }
+                }
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 6,
+                "y": 1
             },
             "id": 2,
             "options": {
                 "colorMode": "background",
+                "graphMode": "none",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "up{job=\"inventory-service\"}",
+                    "refId": "A"
+                }
+            ],
+            "title": "Inventory Service",
+            "type": "stat"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "unit": "s"
+                }
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 12,
+                "y": 1
+            },
+            "id": 3,
+            "options": {
+                "colorMode": "value",
                 "graphMode": "area",
                 "justifyMode": "auto",
                 "orientation": "auto",
@@ -54,31 +200,888 @@
                 },
                 "textMode": "auto"
             },
-            "pluginVersion": "8.3.3",
             "targets": [
                 {
-                    "expr": "rate(http_request_duration_seconds_sum{job=\"order-service\"}[30s]) / rate(http_request_duration_seconds_count{job=\"order-service\"}[30s])",
+                    "expr": "time() - process_start_time_seconds{job=\"order-service\"}",
+                    "legendFormat": "Order",
                     "refId": "A"
                 }
             ],
-            "title": "Order Service Latency (30s Avg)",
+            "title": "Order Service Uptime",
             "type": "stat"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "unit": "s"
+                }
+            },
+            "gridPos": {
+                "h": 4,
+                "w": 6,
+                "x": 18,
+                "y": 1
+            },
+            "id": 4,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "auto",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "time() - process_start_time_seconds{job=\"inventory-service\"}",
+                    "legendFormat": "Inventory",
+                    "refId": "A"
+                }
+            ],
+            "title": "Inventory Service Uptime",
+            "type": "stat"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 5
+            },
+            "id": 101,
+            "title": "⏱️ HTTP Request Latency",
+            "type": "row"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.5
+                            },
+                            {
+                                "color": "red",
+                                "value": 1
+                            }
+                        ]
+                    },
+                    "unit": "s",
+                    "decimals": 3
+                }
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 0,
+                "y": 6
+            },
+            "id": 10,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "rate(http_request_duration_seconds_sum{job=\"order-service\"}[1m]) / rate(http_request_duration_seconds_count{job=\"order-service\"}[1m])",
+                    "refId": "A"
+                }
+            ],
+            "title": "Order Service Avg Latency",
+            "type": "stat"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.5
+                            },
+                            {
+                                "color": "red",
+                                "value": 2
+                            }
+                        ]
+                    },
+                    "unit": "s",
+                    "decimals": 3
+                }
+            },
+            "gridPos": {
+                "h": 5,
+                "w": 6,
+                "x": 6,
+                "y": 6
+            },
+            "id": 11,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"order-service\"}[1m])) by (le))",
+                    "refId": "A"
+                }
+            ],
+            "title": "Order Service P95 Latency",
+            "type": "stat"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 20,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": true,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "unit": "s"
+                }
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 6
+            },
+            "id": 12,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "rate(http_request_duration_seconds_sum{job=\"order-service\"}[1m]) / rate(http_request_duration_seconds_count{job=\"order-service\"}[1m])",
+                    "legendFormat": "Avg Latency",
+                    "refId": "A"
+                },
+                {
+                    "expr": "histogram_quantile(0.50, sum(rate(http_request_duration_seconds_bucket{job=\"order-service\"}[1m])) by (le))",
+                    "legendFormat": "P50",
+                    "refId": "B"
+                },
+                {
+                    "expr": "histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job=\"order-service\"}[1m])) by (le))",
+                    "legendFormat": "P95",
+                    "refId": "C"
+                },
+                {
+                    "expr": "histogram_quantile(0.99, sum(rate(http_request_duration_seconds_bucket{job=\"order-service\"}[1m])) by (le))",
+                    "legendFormat": "P99",
+                    "refId": "D"
+                }
+            ],
+            "title": "Order Service Latency Distribution",
+            "type": "timeseries"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "unit": "reqps"
+                }
+            },
+            "gridPos": {
+                "h": 3,
+                "w": 6,
+                "x": 0,
+                "y": 11
+            },
+            "id": 13,
+            "options": {
+                "colorMode": "value",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_request_duration_seconds_count{job=\"order-service\"}[1m]))",
+                    "refId": "A"
+                }
+            ],
+            "title": "Request Rate",
+            "type": "stat"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "thresholds"
+                    },
+                    "thresholds": {
+                        "mode": "absolute",
+                        "steps": [
+                            {
+                                "color": "green",
+                                "value": null
+                            },
+                            {
+                                "color": "yellow",
+                                "value": 0.01
+                            },
+                            {
+                                "color": "red",
+                                "value": 0.05
+                            }
+                        ]
+                    },
+                    "unit": "percentunit",
+                    "decimals": 2
+                }
+            },
+            "gridPos": {
+                "h": 3,
+                "w": 6,
+                "x": 6,
+                "y": 11
+            },
+            "id": 14,
+            "options": {
+                "colorMode": "background",
+                "graphMode": "area",
+                "justifyMode": "center",
+                "orientation": "auto",
+                "reduceOptions": {
+                    "calcs": [
+                        "lastNotNull"
+                    ],
+                    "fields": "",
+                    "values": false
+                },
+                "textMode": "auto"
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_request_duration_seconds_count{job=\"order-service\", code=~\"5..\"}[1m])) / sum(rate(http_request_duration_seconds_count{job=\"order-service\"}[1m])) or vector(0)",
+                    "refId": "A"
+                }
+            ],
+            "title": "Error Rate (5xx)",
+            "type": "stat"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 14
+            },
+            "id": 102,
+            "title": "🖥️ System Resources",
+            "type": "row"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 20,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": true,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "unit": "bytes"
+                }
+            },
+            "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 0,
+                "y": 15
+            },
+            "id": 20,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "nodejs_heap_size_used_bytes{job=\"order-service\"}",
+                    "legendFormat": "Order - Heap Used",
+                    "refId": "A"
+                },
+                {
+                    "expr": "nodejs_heap_size_total_bytes{job=\"order-service\"}",
+                    "legendFormat": "Order - Heap Total",
+                    "refId": "B"
+                },
+                {
+                    "expr": "nodejs_heap_size_used_bytes{job=\"inventory-service\"}",
+                    "legendFormat": "Inventory - Heap Used",
+                    "refId": "C"
+                },
+                {
+                    "expr": "nodejs_heap_size_total_bytes{job=\"inventory-service\"}",
+                    "legendFormat": "Inventory - Heap Total",
+                    "refId": "D"
+                }
+            ],
+            "title": "Node.js Heap Memory",
+            "type": "timeseries"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 20,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": true,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "unit": "bytes"
+                }
+            },
+            "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 12,
+                "y": 15
+            },
+            "id": 21,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "process_resident_memory_bytes{job=\"order-service\"}",
+                    "legendFormat": "Order Service",
+                    "refId": "A"
+                },
+                {
+                    "expr": "process_resident_memory_bytes{job=\"inventory-service\"}",
+                    "legendFormat": "Inventory Service",
+                    "refId": "B"
+                }
+            ],
+            "title": "Process Memory (RSS)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 20,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": true,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "unit": "percentunit"
+                }
+            },
+            "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 0,
+                "y": 22
+            },
+            "id": 22,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "rate(process_cpu_user_seconds_total{job=\"order-service\"}[1m])",
+                    "legendFormat": "Order - User",
+                    "refId": "A"
+                },
+                {
+                    "expr": "rate(process_cpu_system_seconds_total{job=\"order-service\"}[1m])",
+                    "legendFormat": "Order - System",
+                    "refId": "B"
+                },
+                {
+                    "expr": "rate(process_cpu_user_seconds_total{job=\"inventory-service\"}[1m])",
+                    "legendFormat": "Inventory - User",
+                    "refId": "C"
+                },
+                {
+                    "expr": "rate(process_cpu_system_seconds_total{job=\"inventory-service\"}[1m])",
+                    "legendFormat": "Inventory - System",
+                    "refId": "D"
+                }
+            ],
+            "title": "CPU Usage",
+            "type": "timeseries"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "line",
+                        "fillOpacity": 20,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "smooth",
+                        "lineWidth": 2,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": true,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "none"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "unit": "s"
+                }
+            },
+            "gridPos": {
+                "h": 7,
+                "w": 12,
+                "x": 12,
+                "y": 22
+            },
+            "id": 23,
+            "options": {
+                "legend": {
+                    "calcs": [
+                        "mean",
+                        "max"
+                    ],
+                    "displayMode": "table",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "nodejs_eventloop_lag_seconds{job=\"order-service\"}",
+                    "legendFormat": "Order Service",
+                    "refId": "A"
+                },
+                {
+                    "expr": "nodejs_eventloop_lag_seconds{job=\"inventory-service\"}",
+                    "legendFormat": "Inventory Service",
+                    "refId": "B"
+                }
+            ],
+            "title": "Event Loop Lag",
+            "type": "timeseries"
+        },
+        {
+            "collapsed": false,
+            "gridPos": {
+                "h": 1,
+                "w": 24,
+                "x": 0,
+                "y": 29
+            },
+            "id": 103,
+            "title": "📊 HTTP Requests by Route",
+            "type": "row"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "bars",
+                        "fillOpacity": 80,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "normal"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "unit": "reqps"
+                }
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 0,
+                "y": 30
+            },
+            "id": 30,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_request_duration_seconds_count{job=\"order-service\"}[1m])) by (route)",
+                    "legendFormat": "{{route}}",
+                    "refId": "A"
+                }
+            ],
+            "title": "Requests by Route (Order Service)",
+            "type": "timeseries"
+        },
+        {
+            "datasource": "Prometheus",
+            "fieldConfig": {
+                "defaults": {
+                    "color": {
+                        "mode": "palette-classic"
+                    },
+                    "custom": {
+                        "axisCenteredZero": false,
+                        "axisColorMode": "text",
+                        "axisLabel": "",
+                        "axisPlacement": "auto",
+                        "barAlignment": 0,
+                        "drawStyle": "bars",
+                        "fillOpacity": 80,
+                        "gradientMode": "none",
+                        "hideFrom": {
+                            "legend": false,
+                            "tooltip": false,
+                            "viz": false
+                        },
+                        "lineInterpolation": "linear",
+                        "lineWidth": 1,
+                        "pointSize": 5,
+                        "scaleDistribution": {
+                            "type": "linear"
+                        },
+                        "showPoints": "never",
+                        "spanNulls": false,
+                        "stacking": {
+                            "group": "A",
+                            "mode": "normal"
+                        },
+                        "thresholdsStyle": {
+                            "mode": "off"
+                        }
+                    },
+                    "unit": "reqps"
+                }
+            },
+            "gridPos": {
+                "h": 8,
+                "w": 12,
+                "x": 12,
+                "y": 30
+            },
+            "id": 31,
+            "options": {
+                "legend": {
+                    "calcs": [],
+                    "displayMode": "list",
+                    "placement": "bottom",
+                    "showLegend": true
+                },
+                "tooltip": {
+                    "mode": "multi",
+                    "sort": "desc"
+                }
+            },
+            "targets": [
+                {
+                    "expr": "sum(rate(http_request_duration_seconds_count{job=\"order-service\"}[1m])) by (code)",
+                    "legendFormat": "{{code}}",
+                    "refId": "A"
+                }
+            ],
+            "title": "Requests by Status Code (Order Service)",
+            "type": "timeseries"
         }
     ],
+    "refresh": "5s",
     "schemaVersion": 34,
     "style": "dark",
-    "tags": [],
+    "tags": [
+        "valerix",
+        "microservices",
+        "nodejs"
+    ],
     "templating": {
         "list": []
     },
     "time": {
-        "from": "now-5m",
+        "from": "now-15m",
         "to": "now"
     },
-    "timepicker": {},
+    "timepicker": {
+        "refresh_intervals": [
+            "5s",
+            "10s",
+            "30s",
+            "1m",
+            "5m"
+        ]
+    },
     "timezone": "",
-    "title": "Valerix Dashboard",
+    "title": "Valerix Microservices Dashboard",
     "uid": "valerix-main",
-    "version": 1,
+    "version": 2,
     "weekStart": ""
 }
