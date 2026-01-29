@@ -1,17 +1,23 @@
 apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
-    name: frostbyte-ingress
-    annotations:
-        kubernetes.io/ingress.class: nginx
+  name: valerix-ingress
 spec:
-    rules:
-        - http:
-              paths:
-                  - path: /
-                    pathType: Prefix
-                    backend:
-                        service:
-                            name: network-service
-                            port:
-                                number: 80
+  ingressClassName: nginx
+  rules:
+    - http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: frontend
+                port:
+                  number: 80
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: api-gateway
+                port:
+                  number: 8080
