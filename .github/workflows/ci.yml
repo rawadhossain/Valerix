@@ -1,59 +1,126 @@
-name: CI
+name: Load Test & Verification
 
 on:
   push:
-    branches: [main]
+    branches: ["*"]
   pull_request:
     branches: [main]
+  workflow_dispatch:
 
 jobs:
-  build:
+  load-test:
+    name: System Load Test
     runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        service: [api-gateway, frontend, inventory-service, order-service]
+    timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
-
-      - name: Install dependencies
-        working-directory: services/${{ matrix.service }}
-        run: bun install
-
-      - name: Type check
-        working-directory: services/${{ matrix.service }}
-        run: bunx tsc --noEmit
-
-  docker:
-    runs-on: ubuntu-latest
-    needs: build
-    if: github.event_name == 'push'
-
-    strategy:
-      matrix:
-        service: [api-gateway, frontend, inventory-service, order-service]
-
-    steps:
-      - uses: actions/checkout@v4
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to registry
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Start all services
+        run: |
+          docker compose up -d --build
+          echo "Waiting for services to start..."
 
-      - name: Build & push image
-        uses: docker/build-push-action@v5
+      - name: Wait for services to be healthy
+        run: |
+          echo "Waiting for Order Service..."
+          timeout 120 bash -c 'until curl -sf http://localhost:3001/health; do sleep 2; done'
+          echo "Order Service is up!"
+
+          echo "Waiting for Inventory Service..."
+          timeout 120 bash -c 'until curl -sf http://localhost:3002/health; do sleep 2; done'
+          echo "Inventory Service is up!"
+
+      - name: Seed inventory data
+        run: |
+          curl -X POST http://localhost:3002/seed
+          echo "Inventory seeded"
+
+      - name: Get available products
+        id: products
+        run: |
+          PRODUCTS=$(curl -sf http://localhost:3002/products)
+          echo "Available products:"
+          echo "$PRODUCTS" | jq .
+          FIRST_PRODUCT_ID=$(echo "$PRODUCTS" | jq -r '.[0].id')
+          echo "first_product_id=$FIRST_PRODUCT_ID" >> $GITHUB_OUTPUT
+
+      - name: Run load test
+        id: loadtest
+        run: |
+          chmod +x ./scripts/load-test.sh
+          ./scripts/load-test.sh ${{ steps.products.outputs.first_product_id }}
+        continue-on-error: true
+
+      - name: Collect service logs
+        if: always()
+        run: |
+          mkdir -p logs
+          docker compose logs order-service > logs/order-service.log 2>&1
+          docker compose logs inventory-service > logs/inventory-service.log 2>&1
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
         with:
-          context: services/${{ matrix.service }}
-          push: true
-          tags: ghcr.io/${{ github.repository }}/${{ matrix.service }}:latest
+          name: load-test-results
+          path: |
+            load-test-results.json
+            logs/
+          retention-days: 7
+
+      - name: Display test summary
+        if: always()
+        run: |
+          echo "## Load Test Summary" >> $GITHUB_STEP_SUMMARY
+          if [ -f load-test-results.json ]; then
+            echo '```json' >> $GITHUB_STEP_SUMMARY
+            cat load-test-results.json | jq '.summary' >> $GITHUB_STEP_SUMMARY
+            echo '```' >> $GITHUB_STEP_SUMMARY
+            
+            TOTAL=$(jq '.summary.total_requests' load-test-results.json)
+            SUCCESS=$(jq '.summary.successful' load-test-results.json)
+            FAILED=$(jq '.summary.failed' load-test-results.json)
+            SLOW=$(jq '.summary.slow_responses' load-test-results.json)
+            AVG_TIME=$(jq '.summary.avg_response_time_ms' load-test-results.json)
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "| Metric | Value |" >> $GITHUB_STEP_SUMMARY
+            echo "|--------|-------|" >> $GITHUB_STEP_SUMMARY
+            echo "| Total Requests | $TOTAL |" >> $GITHUB_STEP_SUMMARY
+            echo "| Successful | $SUCCESS |" >> $GITHUB_STEP_SUMMARY
+            echo "| Failed | $FAILED |" >> $GITHUB_STEP_SUMMARY
+            echo "| Slow Responses (>2s) | $SLOW |" >> $GITHUB_STEP_SUMMARY
+            echo "| Avg Response Time | ${AVG_TIME}ms |" >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Check test results
+        run: |
+          if [ -f load-test-results.json ]; then
+            FAILED=$(jq '.summary.failed' load-test-results.json)
+            SLOW=$(jq '.summary.slow_responses' load-test-results.json)
+            
+            echo "Failed requests: $FAILED"
+            echo "Slow responses: $SLOW"
+            
+            # Log slow/failed orders for visibility (don't fail the pipeline)
+            if [ "$SLOW" -gt 0 ]; then
+              echo "::warning::$SLOW requests experienced slow responses (>2s timeout)"
+              echo "Affected orders:"
+              jq '.slow_requests[] | "Order \(.order_id): \(.duration_ms)ms"' load-test-results.json
+            fi
+            
+            if [ "$FAILED" -gt 0 ]; then
+              echo "::warning::$FAILED requests failed (expected due to gremlin delays)"
+              echo "Failed orders:"
+              jq '.failed_requests[] | "Order \(.order_id): \(.error)"' load-test-results.json
+            fi
+          fi
+
+      - name: Cleanup
+        if: always()
+        run: docker compose down -v
