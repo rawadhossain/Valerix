@@ -2,6 +2,8 @@
 
 Valerix is a demonstration of a resilient, fault-tolerant microservices architecture designed to handle distributed system failures gracefully. It simulates a simplified e-commerce flow (Order -> Inventory) with built-in mechanisms for latency injection ("Gremlin"), timeout handling, asynchronous fallback messaging, and real-time visualization.
 
+<img width="611" height="268" alt="image" src="https://github.com/user-attachments/assets/1d8ced3a-b13b-4931-b4ee-da112f681ac1" />
+
 ## 🏗 System Architecture
 
 The system consists of independent services running in Docker containers, orchestrated via Docker Compose.
