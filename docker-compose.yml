@@ -79,6 +79,17 @@ services:
     ports:
       - "9090:9090"
 
+  rabbitmq:
+    image: rabbitmq:3-management
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=user
+      - RABBITMQ_DEFAULT_PASS=password
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
   grafana:
     image: grafana/grafana
     ports:
@@ -95,4 +106,5 @@ services:
 volumes:
   order-db-data:
   inventory-db-data:
+  rabbitmq-data:
   grafana-storage:

@@ -18,6 +18,8 @@ const proxyOptions = {
         '^/api/products': '/products',
         '^/api/inventory': '/inventory',
     },
+    timeout: 10000,
+    proxyTimeout: 10000
 };
 
 // Routes

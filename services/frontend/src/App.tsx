@@ -2,8 +2,7 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import './index.css'
 
-const ORDER_SERVICE_URL = import.meta.env.VITE_ORDER_SERVICE_URL || 'http://localhost:3001';
-const INVENTORY_SERVICE_URL = import.meta.env.VITE_INVENTORY_SERVICE_URL || 'http://localhost:3002';
+const API_GATEWAY_URL = import.meta.env.VITE_API_GATEWAY_URL || 'http://localhost:8080/api';
 
 interface Product {
     id: string;
@@ -23,18 +22,18 @@ function App() {
 
     const checkHealth = async () => {
         try {
-            await axios.get(`${ORDER_SERVICE_URL}/health`);
+            await axios.get(`${API_GATEWAY_URL}/health/orders`);
             setHealth({ order: 'UP' });
         } catch (e) {
             setHealth({ order: 'DOWN' });
         }
     };
 
-    const fetchProducts = async () => {
+    const fetchProducts = async (initializeSelection = false) => {
         try {
-            const res = await axios.get(`${INVENTORY_SERVICE_URL}/products`);
+            const res = await axios.get(`${API_GATEWAY_URL}/products`);
             setProducts(res.data);
-            if (res.data.length > 0 && !selectedProduct) {
+            if (initializeSelection && res.data.length > 0 && !selectedProduct) {
                 setSelectedProduct(res.data[0].id);
             }
         } catch (e) {
@@ -44,13 +43,50 @@ function App() {
 
     useEffect(() => {
         checkHealth();
-        fetchProducts();
+        fetchProducts(true);
         const interval = setInterval(() => {
             checkHealth();
-            fetchProducts(); // Refresh stock levels
+            fetchProducts(false); // Refresh stock levels without resetting selection
         }, 5000);
         return () => clearInterval(interval);
     }, []);
+
+    const [queuedOrderIds, setQueuedOrderIds] = useState<string[]>([]);
+
+    useEffect(() => {
+        if (queuedOrderIds.length === 0) return;
+
+        const pollInterval = setInterval(async () => {
+            try {
+                const res = await axios.get(`${API_GATEWAY_URL}/orders`);
+                const orders = res.data;
+
+                // Check status of all queued orders
+                const remainingQueuedIds = queuedOrderIds.filter(id => {
+                    const order = orders.find((o: any) => o.id === id);
+                    if (order && order.status === 'COMPLETED') {
+                        addLog(`✅ Async Order Completed! ID: ${id}`);
+                        fetchProducts(); // Refresh stock
+                        return false; // Remove from queued list
+                    }
+                    if (order && order.status === 'FAILED') {
+                        addLog(`❌ Async Order Failed! ID: ${id}`);
+                        return false; // Remove from queued list
+                    }
+                    return true; // Keep polling
+                });
+
+                if (remainingQueuedIds.length !== queuedOrderIds.length) {
+                    setQueuedOrderIds(remainingQueuedIds);
+                }
+
+            } catch (e) {
+                console.error("Polling error", e);
+            }
+        }, 2000);
+
+        return () => clearInterval(pollInterval);
+    }, [queuedOrderIds]);
 
     const placeOrder = async (isGremlin: boolean) => {
         if (!selectedProduct) {
@@ -63,18 +99,44 @@ function App() {
         addLog(`Initiating Order... (Product: ${products.find(p => p.id === selectedProduct)?.name}, Gremlin: ${isGremlin ? 'ON' : 'OFF'})`);
 
         try {
-            // Use quantity=13 to trigger Gremlin Latency in Inventory Service
-            const quantity = isGremlin ? 3 : 1;
-            const response = await axios.post(`${ORDER_SERVICE_URL}/orders`, {
+            // Send 'gremlin' flag to trigger latency in Inventory Service
+            const quantity = 1;
+            const response = await axios.post(`${API_GATEWAY_URL}/orders`, {
                 productId: selectedProduct,
-                quantity
+                quantity,
+                gremlin: isGremlin
             });
 
             const end = performance.now();
             const dur = Math.round(end - start);
             setLatency(dur);
-            addLog(`✅ Order Success! ID: ${response.data.id}. Duration: ${dur}ms`);
-            fetchProducts(); // Update stock immediately
+
+            if (response.status === 202) {
+                // QUEUED
+                addLog(`⚠️ Order Queued: ${response.data.message}. Duration: ${dur}ms`);
+
+                // Poll for completion
+                const orderId = response.data.id;
+                const pollInterval = setInterval(async () => {
+                    try {
+                        const pollRes = await axios.get(`${API_GATEWAY_URL}/orders`);
+                        // Ideally we'd have a specific GET /orders/:id endpoint, but filtering list works for demo
+                        const myOrder = pollRes.data.find((o: any) => o.id === orderId);
+                        if (myOrder && myOrder.status === 'COMPLETED') {
+                            addLog(`✅ Async Order Completed! ID: ${orderId}`);
+                            clearInterval(pollInterval);
+                            fetchProducts();
+                        }
+                    } catch (e) {
+                        console.error("Polling error", e);
+                    }
+                }, 2000);
+
+            } else {
+                // SUCCESS
+                addLog(`✅ Order Success! ID: ${response.data.id}. Duration: ${dur}ms`);
+                fetchProducts(); // Update stock immediately
+            }
 
         } catch (error: any) {
             const end = performance.now();
@@ -90,7 +152,7 @@ function App() {
 
     return (
         <>
-            <h1>Valerix Resilient Platform</h1>
+            <h1>Valerix</h1>
 
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
                 <div className={`status-badge ${health.order === 'UP' ? 'CONFIRMED' : 'FAILED'}`}>
@@ -131,10 +193,12 @@ function App() {
                     fontSize: '2rem',
                     fontWeight: 'bold',
                     marginBottom: '1rem',
-                    color: latency !== null ? (latency > 1500 ? 'var(--danger)' : 'var(--success)') : 'inherit'
+                    color: latency !== null ? (latency > 2000 ? '#e3b341' : latency > 1500 ? 'var(--danger)' : 'var(--success)') : 'inherit'
                 }}>
-                    {latency !== null ? `${latency}ms` : '---'}
-                    <div style={{ fontSize: '0.8rem', color: '#8b949e', fontWeight: 'normal' }}>Last Request Latency</div>
+                    {latency !== null ? (latency > 2000 ? 'QUEUED' : `${latency}ms`) : '---'}
+                    <div style={{ fontSize: '0.8rem', color: '#8b949e', fontWeight: 'normal' }}>
+                        {latency !== null && latency > 2000 ? 'Processed in Background' : 'Last Request Latency'}
+                    </div>
                 </div>
 
                 <div style={{ display: 'flex', justifyContent: 'center', flexWrap: 'wrap' }}>

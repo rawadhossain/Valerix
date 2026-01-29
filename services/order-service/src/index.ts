@@ -8,6 +8,49 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3001;
 const INVENTORY_SERVICE_URL = process.env.INVENTORY_SERVICE_URL || 'http://localhost:3002';
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://user:password@rabbitmq:5672';
+let channel: any;
+
+// Connect to RabbitMQ
+async function connectToRabbit() {
+    const amqp = require('amqplib');
+    while (true) {
+        try {
+            const connection = await amqp.connect(RABBITMQ_URL);
+            channel = await connection.createChannel();
+            await channel.assertQueue('inventory_queue');
+            await channel.assertQueue('order_completion_queue');
+            console.log("Connected to RabbitMQ (Producer & Consumer)");
+
+            // Listen for Completion Events
+            channel.consume('order_completion_queue', async (msg: any) => {
+                if (msg) {
+                    const data = JSON.parse(msg.content.toString());
+                    console.log(`Received Async Event: ${data.status} for Order ${data.orderId}`);
+
+                    // Update Order Status in DB
+                    try {
+                        const status = (data.status === 'COMPLETED' || data.status === 'FAILED') ? data.status : 'COMPLETED';
+
+                        await prisma.order.update({
+                            where: { id: data.orderId },
+                            data: { status: status }
+                        });
+                        console.log(`Order ${data.orderId} updated to ${status}`);
+                    } catch (e) {
+                        console.error("Failed to update order status:", e);
+                    }
+
+                    channel.ack(msg);
+                }
+            });
+            break;
+        } catch (e) {
+            console.error("RabbitMQ Connection Failed, retrying in 5s...", e);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
+}
 
 app.use(cors());
 app.use(express.json());
@@ -56,7 +99,7 @@ app.get('/orders', async (req: Request, res: Response) => {
 
 // Create Order (with Timeout handling)
 app.post('/orders', async (req: Request, res: Response) => {
-    const { productId, quantity } = req.body;
+    const { productId, quantity, gremlin } = req.body;
 
     if (!productId || !quantity) {
         res.status(400).json({ error: 'Missing productId or quantity' });
@@ -79,7 +122,8 @@ app.post('/orders', async (req: Request, res: Response) => {
         const inventoryResponse = await axios.post(`${INVENTORY_SERVICE_URL}/inventory/deduct`, {
             productId,
             quantity,
-            orderId: order.id // For Idempotency
+            orderId: order.id, // For Idempotency
+            gremlin
         }, {
             timeout: 2000
         });
@@ -99,10 +143,39 @@ app.post('/orders', async (req: Request, res: Response) => {
         console.error("Inventory call failed:", error.message);
 
         let errorMessage = 'Order failed due to inventory issue';
-        if (error.code === 'ECONNABORTED') {
-            errorMessage = 'Order processing timed out waiting for inventory';
+        if (error.code === 'ECONNABORTED' || error.message.includes('timeout')) {
+            // TIMEOUT DETECTED -> Fallback to Async Queue
+            console.log(`Order ${order.id} timed out. Queuing for background processing...`);
+
+            try {
+                if (channel) {
+                    const msg = JSON.stringify({ productId, quantity, orderId: order.id });
+                    channel.sendToQueue('inventory_queue', Buffer.from(msg));
+
+                    // Update Order to QUEUED
+                    const queuedOrder = await prisma.order.update({
+                        where: { id: order.id },
+                        data: { status: 'QUEUED' }
+                    });
+
+                    // Return QUEUED status to user
+                    res.status(202).json({
+                        message: 'Order timed out, queued for async processing',
+                        status: 'QUEUED',
+                        id: order.id
+                    });
+                    return;
+                } else {
+                    console.error("RabbitMQ channel not available");
+                    throw new Error("Critical: Service Unavailable (Queue Down)");
+                }
+            } catch (queueError) {
+                console.error("Queueing failed:", queueError);
+                // Fallthrough to failure
+            }
         }
 
+        // General Failure
         // Update to FAILED
         await prisma.order.update({
             where: { id: order.id },
@@ -113,6 +186,7 @@ app.post('/orders', async (req: Request, res: Response) => {
     }
 });
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
     console.log(`Order Service running on port ${PORT}`);
+    await connectToRabbit();
 });

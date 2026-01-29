@@ -62,6 +62,85 @@ app.get('/products', async (req, res) => {
 });
 
 // Deduct Inventory (with Idempotency + Gremlin Latency)
+const RABBITMQ_URL = process.env.RABBITMQ_URL || 'amqp://user:password@rabbitmq:5672';
+let channel: any;
+
+// Connect to RabbitMQ
+// Connect to RabbitMQ
+async function connectToRabbit() {
+    const amqp = require('amqplib');
+    while (true) {
+        try {
+            const connection = await amqp.connect(RABBITMQ_URL);
+            channel = await connection.createChannel();
+            await channel.assertQueue('inventory_queue');
+            await channel.assertQueue('order_completion_queue');
+
+            console.log("Connected to RabbitMQ & listening on inventory_queue");
+
+            channel.consume('inventory_queue', async (msg: any) => {
+                if (msg !== null) {
+                    const data = JSON.parse(msg.content.toString());
+                    console.log("Received Async Order via RabbitMQ:", data);
+
+                    try {
+                        await deductInventory(data.productId, data.quantity, data.orderId);
+
+                        // Send Completion Event
+                        const completionMsg = JSON.stringify({
+                            orderId: data.orderId,
+                            status: 'COMPLETED',
+                            message: 'Inventory deducted successfully (Async)'
+                        });
+                        channel.sendToQueue('order_completion_queue', Buffer.from(completionMsg));
+                        console.log("Sent completion event for:", data.orderId);
+
+                        channel.ack(msg);
+                    } catch (e: any) {
+                        console.error("Async Processing Failed:", e.message);
+                        channel.ack(msg);
+                    }
+                }
+            });
+            break; // Success
+        } catch (e) {
+            console.error("RabbitMQ Connection Failed, retrying in 5s...", e);
+            await new Promise(resolve => setTimeout(resolve, 5000));
+        }
+    }
+}
+
+// Logic: Deduct Inventory
+async function deductInventory(productId: string, quantity: number, orderId: string) {
+    const existingLog = await prisma.idempotencyLog.findUnique({
+        where: { orderId }
+    });
+
+    if (existingLog) {
+        console.log(`Idempotency check: Order ${orderId} already processed.`);
+        return { message: 'Stock already deducted (Idempotent)', success: true };
+    }
+
+    await prisma.$transaction(async (tx) => {
+        const product = await tx.product.findUnique({ where: { id: productId } });
+        if (!product || product.stock < quantity) {
+            throw new Error('Insufficient stock or product not found');
+        }
+
+        await tx.product.update({
+            where: { id: productId },
+            data: { stock: product.stock - quantity }
+        });
+
+        await tx.idempotencyLog.create({
+            data: { orderId }
+        });
+    });
+
+    return { message: 'Stock deducted', success: true };
+}
+
+// Deduct Inventory Endpoint
 app.post('/inventory/deduct', async (req: Request, res: Response) => {
     const { productId, quantity, orderId } = req.body;
 
@@ -71,52 +150,16 @@ app.post('/inventory/deduct', async (req: Request, res: Response) => {
     }
 
     try {
-        // 1. Check Idempotency
-        const existingLog = await prisma.idempotencyLog.findUnique({
-            where: { orderId }
-        });
-
-        if (existingLog) {
-            console.log(`Idempotency check: Order ${orderId} already processed.`);
-            // Return previous success immediately (skip Gremlin this time?)
-            // If we want to simulate "Vanishing Response" persisting, we might sleep again, 
-            // but to solve the issue, we usually return success fast on retry.
-            res.status(200).json({ message: 'Stock already deducted (Idempotent)', success: true });
-            return;
-        }
-
-        // 2. Transaction: Deduct Stock + Log Idempotency
-        await prisma.$transaction(async (tx) => {
-            const product = await tx.product.findUnique({ where: { id: productId } });
-            if (!product || product.stock < quantity) {
-                throw new Error('Insufficient stock or product not found');
-            }
-
-            await tx.product.update({
-                where: { id: productId },
-                data: { stock: product.stock - quantity }
-            });
-
-            await tx.idempotencyLog.create({
-                data: { orderId }
-            });
-        });
-
-        // 3. Gremlin Latency (The Vanishing Response)
-        // Deterministic delay: response delays by 5 seconds if orderId ends with 'DELAY' or basically always to force timeout demonstration.
-        // The requirement says "deterministic pattern". Let's say if quantity is > 5, or just always for now to verify observability.
-        // Let's make it deterministic based on orderId hash/char.
-        // If orderId starts with 'GREMLIN', we delay.
-        // Or simpler: Just delay 3s (Order timeout is 2s).
-        // But then *all* orders fail.
-        // Let's only delay if the 'quantity' is 13 (unlucky number).
-
-        if (quantity === 13) {
+        // Gremlin Latency: Simulate "Not Responding" / High Latency
+        // This will cause the synchronous caller (Order Service) to timeout.
+        // Gremlin Latency: Simulate "Not Responding" / High Latency
+        if (req.body.gremlin === true) {
             console.log("Gremlin Triggered: Delaying response...");
             await new Promise(resolve => setTimeout(resolve, 5000));
         }
 
-        res.status(200).json({ message: 'Stock deducted', success: true });
+        const result = await deductInventory(productId, quantity, orderId);
+        res.status(200).json(result);
 
     } catch (error: any) {
         console.error("Inventory Error:", error.message);
@@ -127,4 +170,5 @@ app.post('/inventory/deduct', async (req: Request, res: Response) => {
 app.listen(PORT, async () => {
     console.log(`Inventory Service running on port ${PORT}`);
     await seedProducts();
+    await connectToRabbit();
 });
