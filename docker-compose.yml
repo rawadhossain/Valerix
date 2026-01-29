@@ -1,0 +1,37 @@
+services:
+    api-gateway:
+        build: ./services/api-gateway
+        ports:
+            - "8080:3000"
+        env_file:
+            - ./services/api-gateway/.env
+        depends_on:
+            - network-service
+            - product-service
+            - demand-service
+            - validation-service
+        restart: unless-stopped
+
+    network-service:
+        build: ./services/network-service
+        env_file:
+            - ./services/network-service/.env
+        restart: unless-stopped
+
+    product-service:
+        build: ./services/product-service
+        env_file:
+            - ./services/product-service/.env
+        restart: unless-stopped
+
+    demand-service:
+        build: ./services/demand-service
+        env_file:
+            - ./services/demand-service/.env
+        restart: unless-stopped
+
+    validation-service:
+        build: ./services/validation-service
+        env_file:
+            - ./services/validation-service/.env
+        restart: unless-stopped
