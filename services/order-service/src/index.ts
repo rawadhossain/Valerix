@@ -75,6 +75,38 @@ app.use((req, res, next) => {
     next();
 });
 
+// Rolling Window Stats for Alerting
+const WINDOW_SIZE_MS = 30000;
+let requestDurations: { time: number, duration: number }[] = [];
+
+// Periodic Cleanup
+setInterval(() => {
+    const now = Date.now();
+    requestDurations = requestDurations.filter(r => now - r.time <= WINDOW_SIZE_MS);
+}, 5000);
+
+app.use((req, res, next) => {
+    const start = Date.now();
+    res.on('finish', () => {
+        const duration = (Date.now() - start) / 1000; // in seconds
+        requestDurations.push({ time: Date.now(), duration });
+    });
+    next();
+});
+
+// Stats Endpoint
+app.get('/stats', (req, res) => {
+    const now = Date.now();
+    // Ensure we are looking at fresh data (though cleanup runs periodically)
+    const validDurations = requestDurations.filter(r => now - r.time <= WINDOW_SIZE_MS);
+
+    const count = validDurations.length;
+    const totalDuration = validDurations.reduce((sum, r) => sum + r.duration, 0);
+    const average = count > 0 ? totalDuration / count : 0;
+
+    res.json({ averageLatency: average, requestCount: count });
+});
+
 // Health Check
 app.get('/health', async (req: Request, res: Response) => {
     try {

@@ -70,6 +70,13 @@ app.use('/api/metrics/inventory', createProxyMiddleware({
     pathRewrite: { '^/api/metrics/inventory': '/metrics' }
 }));
 
+// Service Stats (Custom)
+app.use('/api/stats/orders', createProxyMiddleware({
+    target: ORDER_SERVICE_URL,
+    changeOrigin: true,
+    pathRewrite: { '^/api/stats/orders': '/stats' }
+}));
+
 app.get('/health', (req, res) => {
     res.json({ status: 'API Gateway UP' });
 });

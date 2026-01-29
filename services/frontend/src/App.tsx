@@ -51,6 +51,20 @@ function App() {
         return () => clearInterval(interval);
     }, []);
 
+    const [avgLatency, setAvgLatency] = useState<number>(0);
+
+    useEffect(() => {
+        const statsInterval = setInterval(async () => {
+            try {
+                const res = await axios.get(`${API_GATEWAY_URL}/stats/orders`);
+                setAvgLatency(res.data.averageLatency);
+            } catch (e) {
+                console.error("Failed to fetch stats");
+            }
+        }, 2000);
+        return () => clearInterval(statsInterval);
+    }, []);
+
     const [queuedOrderIds, setQueuedOrderIds] = useState<string[]>([]);
 
     useEffect(() => {
@@ -157,6 +171,13 @@ function App() {
             <div style={{ display: 'flex', justifyContent: 'center', gap: '1rem', marginBottom: '2rem' }}>
                 <div className={`status-badge ${health.order === 'UP' ? 'CONFIRMED' : 'FAILED'}`}>
                     Order Service: {health.order}
+                </div>
+                <div className={`status-badge`} style={{
+                    backgroundColor: avgLatency > 0.1 ? 'var(--danger)' : 'var(--success)',
+                    color: 'white',
+                    transition: 'background-color 0.3s'
+                }}>
+                    Avg Latency (30s): {avgLatency.toFixed(2)}s
                 </div>
             </div>
 
