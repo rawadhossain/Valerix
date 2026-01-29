@@ -1,0 +1,22 @@
+apiVersion: monitoring.coreos.com/v1
+kind: ServiceMonitor
+metadata:
+    name: frostbyte-services-monitor
+    labels:
+        release: monitoring # Must match the Helm release name usually
+spec:
+    selector:
+        matchExpressions:
+            - key: app
+              operator: In
+              values:
+                  - order-service
+                  - inventory-service
+    endpoints:
+        - port: "3001" # Target port for Order Service (must be named in Service or numeric)
+          path: /metrics
+        - port: "3002" # Target port for Inventory Service
+          path: /metrics
+    namespaceSelector:
+        matchNames:
+            - default
