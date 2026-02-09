@@ -6,7 +6,11 @@ Valerix is a demonstration of a resilient, fault-tolerant microservices architec
 
 ## Architecture Overview
 
-![Architecture](public/valerix.png)
+<!--![Architecture](public/valerix.png) -->
+
+<p align="center">
+  <img src="public/valerix.png" alt="Architecture" />
+</p>
 
 ## Container Orchestration View
 
