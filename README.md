@@ -8,19 +8,29 @@ Valerix is a demonstration of a resilient, fault-tolerant microservices architec
 
 <!--![Architecture](public/valerix.png) -->
 
-<p align="center">
-  <img src="public/valerix.png" alt="Architecture" />
-</p>
+<img src="public/valerix.png" alt="Architecture" />
+
 
 ## Container Orchestration View
 
-<!--
-![Container Orchestration View](public/mermaid.svg)
--->
-<p align="center">
-  <img src="public/mermaid.svg" width="80%" alt="Container Orchestration View" />
-</p>
 
+![Container Orchestration View](public/val.png)
+
+<!-- <p align="center">
+  <img src="public/mermaid.svg" width="80%" alt="Container Orchestration View" />
+</p> -->
+
+## 🏗 Project Screenshots
+**Dashboard**
+![Project Screenshots](public/valerix1.png)
+
+**Metrics**
+![Project Screenshots](public/valerix2.png)
+
+**Grafana Dashboard**
+![Project Screenshots](public/valerix3.png)
+
+<br>
 
 ## 🏗 System Architecture
 
